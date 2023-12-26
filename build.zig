@@ -16,6 +16,18 @@ pub fn build(b: *std.Build) void {
     tinycad.linkLibC();
     b.installArtifact(tinycad);
 
+    // --- Run command ---
+    {
+        const run_cmd = b.addRunArtifact(tinycad);
+        run_cmd.step.dependOn(b.getInstallStep());
+
+        if (b.args) |args| {
+            run_cmd.addArgs(args);
+        }
+        const run_step = b.step("run", "Run the app");
+        run_step.dependOn(&run_cmd.step);
+    }
+
     // const sandbox = b.addExecutable(.{
     //     .name = "sandbox",
     //     .root_source_file = .{ .path = "sandbox/sandbox.zig" },
@@ -30,18 +42,6 @@ pub fn build(b: *std.Build) void {
     // const zsdl_pkg = zsdl.package(b, target, optimize, .{});
     // zopengl_pkg.link(exe);
     // zsdl_pkg.link(exe);
-
-    // --- Run command ---
-    {
-        const run_cmd = b.addRunArtifact(tinycad);
-        run_cmd.step.dependOn(b.getInstallStep());
-
-        if (b.args) |args| {
-            run_cmd.addArgs(args);
-        }
-        const run_step = b.step("run", "Run the app");
-        run_step.dependOn(&run_cmd.step);
-    }
 
     // const unit_tests = b.addTest(.{
     //     .root_source_file = .{ .path = "src/main.zig" },
