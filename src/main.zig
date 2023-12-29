@@ -11,6 +11,8 @@ const Rect = struct {
 
 const UI_OBJECTS_SIZE = 256 * 1024;
 
+const UI_FLAGS = enum {};
+
 const UI = struct {
     const Object = struct {
         id: []const u8,
@@ -43,6 +45,22 @@ const UI = struct {
 
     pub fn endFrame(self: *@This()) void {
         self.objects_stack.idx = 0;
+    }
+
+    pub fn getPositionTestObject(self: *@This()) @Vector(2, f32) {
+        return self.objects_stack.items[self.objects_stack.idx].position;
+    }
+
+    pub fn setPositionTestObject(self: *@This(), position: @Vector(2, f32)) void {
+        self.objects_stack.items[self.objects_stack.idx].position = position;
+    }
+
+    pub fn getSizeTestObject(self: *@This()) @Vector(2, f32) {
+        return self.objects_stack.items[self.objects_stack.idx].size;
+    }
+
+    pub fn setSizeTestObject(self: *@This(), size: @Vector(2, f32)) void {
+        self.objects_stack.items[self.objects_stack.idx].size = size;
     }
 
     pub fn drawTestObject(self: *@This(), id: []const u8) void {
@@ -132,20 +150,11 @@ pub fn main() void {
 
                 ui.beginFrame();
 
+                // ui.setPositionTestObject(.{ 100, 100 });
                 ui.drawTestObject("Object 1");
 
-                if (ui.hot_object) |*object| {
-                    var buf: [1024]u8 = undefined;
-                    _ = std.fmt.bufPrintZ(&buf, "object: {any}\n", .{object}) catch @panic("error");
-                    object.*.position[0] = mousePosition[0] - offset[0];
-                    object.*.position[1] = mousePosition[1] - offset[1];
-
-                    if (r.IsMouseButtonReleased(r.MOUSE_BUTTON_LEFT)) {
-                        ui.hot_object = null;
-                    }
-
-                    r.DrawText(&buf[0], 10, 10, 10, r.BLACK);
-                }
+                // ui.setPositionTestObject(.{ 200, 200 });
+                ui.drawTestObject("Object 2");
 
                 for (ui.objects_stack.items[0..ui.objects_stack.idx]) |*object| {
                     const b = Rect{ .position = object.position, .size = object.size };
@@ -159,6 +168,19 @@ pub fn main() void {
 
                     r.DrawRectangleV(.{ .x = object.position[0], .y = object.position[1] }, .{ .x = object.size[0], .y = object.size[1] }, r.BLUE);
                     r.DrawText(&object.id[0], @as(i32, @intFromFloat(object.position[0])), @as(i32, @intFromFloat(object.position[1])), 10, r.RAYWHITE);
+                }
+
+                if (ui.hot_object) |*object| {
+                    var buf: [1024]u8 = undefined;
+                    _ = std.fmt.bufPrintZ(&buf, "[{s}] object: {any}\n", .{ object.*.id, object.*.position }) catch @panic("error");
+                    object.*.position[0] = mousePosition[0] - offset[0];
+                    object.*.position[1] = mousePosition[1] - offset[1];
+
+                    if (r.IsMouseButtonReleased(r.MOUSE_BUTTON_LEFT)) {
+                        ui.hot_object = null;
+                    }
+
+                    r.DrawText(&buf[0], 10, 10, 10, r.BLACK);
                 }
 
                 ui.endFrame();
