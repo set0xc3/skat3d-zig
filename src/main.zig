@@ -11,8 +11,6 @@ const Rect = struct {
 
 const UI_OBJECTS_SIZE = 256 * 1024;
 
-const UI_FLAGS = enum {};
-
 const UI = struct {
     const Object = struct {
         id: []const u8,
@@ -37,13 +35,13 @@ const UI = struct {
 
     pub fn deInit() void {}
 
-    pub fn beginFrame(self: *@This()) void {
+    pub fn begin(self: *@This()) void {
         if (self.objects_stack.idx >= UI_OBJECTS_SIZE) {
             self.objects_stack.idx = 0;
         }
     }
 
-    pub fn endFrame(self: *@This()) void {
+    pub fn end(self: *@This()) void {
         self.objects_stack.idx = 0;
     }
 
@@ -68,9 +66,27 @@ const UI = struct {
         // const newID = std.fmt.bufPrintZ(&buf, "{d}:{s}\n", .{ self.object_idx, id }) catch @panic("error");
         // std.debug.print("{s}", .{newID});
 
-        self.objects_stack.items[self.objects_stack.idx].id = id;
-        self.objects_stack.items[self.objects_stack.idx].size = .{ 100, 100 };
+        var object = self.objects_stack.items[self.objects_stack.idx];
+        object.id = id;
+        object.size = .{ 100, 100 };
         self.objects_stack.idx += 1;
+    }
+
+    pub fn button(self: *@This(), id: []const u8) bool {
+        var result_click: bool = false;
+
+        ui.drawTestObject(id);
+
+        const object = self.objects_stack.items[self.objects_stack.idx];
+        const b = Rect{ .position = object.position, .size = object.size };
+
+        if (is_point_aabb(self.mouse.position, b)) {
+            if (r.IsMouseButtonPressed(r.MOUSE_BUTTON_LEFT)) {
+                result_click = true;
+            }
+        }
+
+        return result_click;
     }
 };
 
@@ -102,7 +118,8 @@ pub fn main() void {
         .size = .{ 100, 100 },
     };
     _ = testObject;
-    var offset: @Vector(2, f32) = undefined;
+    const offset: @Vector(2, f32) = undefined;
+    _ = offset;
 
     while (!r.WindowShouldClose()) {
         const screenW = r.GetScreenWidth();
@@ -148,42 +165,29 @@ pub fn main() void {
                     r.DrawLineV(pointBegin, pointEnd, r.GREEN);
                 }
 
-                ui.beginFrame();
+                ui.mouse.position = mousePosition;
 
-                // ui.setPositionTestObject(.{ 100, 100 });
-                ui.drawTestObject("Object 1");
+                ui.begin();
 
-                // ui.setPositionTestObject(.{ 200, 200 });
-                ui.drawTestObject("Object 2");
+                if (ui.button("Button 1")) {
+                    std.debug.print("click\n", .{});
+                }
 
                 for (ui.objects_stack.items[0..ui.objects_stack.idx]) |*object| {
-                    const b = Rect{ .position = object.position, .size = object.size };
-                    if (is_point_aabb(mousePosition, b)) {
-                        if (r.IsMouseButtonPressed(r.MOUSE_BUTTON_LEFT)) {
-                            ui.hot_object = object;
-                            offset[0] = mousePosition[0] - object.position[0];
-                            offset[1] = mousePosition[1] - object.position[1];
-                        }
-                    }
-
+                    //     const b = Rect{ .position = object.position, .size = object.size };
+                    //     if (is_point_aabb(mousePosition, b)) {
+                    //         if (r.IsMouseButtonPressed(r.MOUSE_BUTTON_LEFT)) {
+                    //             ui.hot_object = object;
+                    //             offset[0] = mousePosition[0] - object.position[0];
+                    //             offset[1] = mousePosition[1] - object.position[1];
+                    //         }
+                    //     }
+                    //
                     r.DrawRectangleV(.{ .x = object.position[0], .y = object.position[1] }, .{ .x = object.size[0], .y = object.size[1] }, r.BLUE);
-                    r.DrawText(&object.id[0], @as(i32, @intFromFloat(object.position[0])), @as(i32, @intFromFloat(object.position[1])), 10, r.RAYWHITE);
+                    // r.DrawText(&object.id[0], @as(i32, @intFromFloat(object.position[0])), @as(i32, @intFromFloat(object.position[1])), 10, r.RAYWHITE);
                 }
 
-                if (ui.hot_object) |*object| {
-                    var buf: [1024]u8 = undefined;
-                    _ = std.fmt.bufPrintZ(&buf, "[{s}] object: {any}\n", .{ object.*.id, object.*.position }) catch @panic("error");
-                    object.*.position[0] = mousePosition[0] - offset[0];
-                    object.*.position[1] = mousePosition[1] - offset[1];
-
-                    if (r.IsMouseButtonReleased(r.MOUSE_BUTTON_LEFT)) {
-                        ui.hot_object = null;
-                    }
-
-                    r.DrawText(&buf[0], 10, 10, 10, r.BLACK);
-                }
-
-                ui.endFrame();
+                ui.end();
 
                 // r.DrawFPS(10, 10);
             }
